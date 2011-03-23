@@ -546,6 +546,11 @@ a.button:hover {
   background-color: #ddd;
 }
 
+
+.source {
+    font-family: monospace;
+}
+
 code.source {
   color: #006;
 }
