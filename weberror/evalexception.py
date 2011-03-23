@@ -60,6 +60,34 @@ def html_quote(v):
         return ''
     return cgi.escape(str(v), 1)
 
+
+def asbool(obj):
+    """
+    Convert the string passed into a boolean
+    """
+    if isinstance(obj, (str, unicode)):
+        obj = obj.strip().lower()
+        if obj in ['true', 'yes', 'on', 'y', 't', '1']:
+            return True
+        elif obj in ['false', 'no', 'off', 'n', 'f', '0']:
+            return False
+        else:
+            raise ValueError(
+                "String is not true/false: %r" % obj)
+    return bool(obj)
+
+
+def asint(obj):
+    """
+    Convert the string passed into an integer
+    """
+    try:
+        return int(obj)
+    except (TypeError, ValueError), e:
+        raise ValueError(
+            "Bad integer value: %r" % obj)
+
+
 def preserve_whitespace(v, quote=True):
     """
     Quote a value for HTML, preserving whitespace (translating
@@ -197,6 +225,7 @@ class EvalException(object):
                  xmlhttp_key=None, media_paths=None, 
                  templating_formatters=None, head_html='', footer_html='',
                  reporters=None, libraries=None,
+                 context_size=2,
                  **params):
         self.libraries = libraries or []
         self.application = application
@@ -218,6 +247,7 @@ class EvalException(object):
         if reporters is None:
             reporters = []
         self.reporters = reporters
+        self.context_size = context_size
     
     def __call__(self, environ, start_response):
         ## FIXME: print better error message (maybe fall back on
@@ -467,7 +497,8 @@ class EvalException(object):
             debug_info = DebugInfo(count, exc_info, exc_data, base_path,
                                    environ, view_uri, self.error_template,
                                    self.templating_formatters, self.head_html,
-                                   self.footer_html, self.libraries)
+                                   self.footer_html, self.libraries,
+                                   self.context_size)
             assert count not in self.debug_infos
             self.debug_infos[count] = debug_info
 
@@ -487,7 +518,7 @@ class DebugInfo(object):
 
     def __init__(self, counter, exc_info, exc_data, base_path,
                  environ, view_uri, error_template, templating_formatters, 
-                 head_html, footer_html, libraries):
+                 head_html, footer_html, libraries, context_size):
         self.counter = counter
         self.exc_data = exc_data
         self.base_path = base_path
@@ -499,6 +530,7 @@ class DebugInfo(object):
         self.head_html = head_html
         self.footer_html = footer_html
         self.libraries = libraries
+        self.context_size = context_size
         self.exc_type, self.exc_value, self.tb = exc_info
         __exception_formatter__ = 1
         self.frames = []
@@ -536,7 +568,7 @@ class DebugInfo(object):
 
     def content(self):
         traceback_body, extra_data = format_eval_html(self.exc_data, 
-            self.base_path, self.counter, self.libraries)
+            self.base_path, self.counter, self.libraries, self.context_size)
         repost_button = make_repost_button(self.environ)
         template_data = '<p>No Template information available.</p>'
         tab = 'traceback_data'
@@ -649,11 +681,12 @@ def pprint_format(value, safe=False):
             raise
     return out.getvalue()
 
-def format_eval_html(exc_data, base_path, counter, libraries):
+def format_eval_html(exc_data, base_path, counter, libraries, context_size=2):
     short_formatter = EvalHTMLFormatter(
         base_path=base_path,
         counter=counter,
-        include_reusable=False)
+        include_reusable=False,
+        context_size=context_size)
     short_er, extra_data = short_formatter.format_collected_data(exc_data)
     short_text_er, text_extra_data = formatter.format_text(exc_data, show_extra_data=False)
     long_formatter = EvalHTMLFormatter(
@@ -661,7 +694,8 @@ def format_eval_html(exc_data, base_path, counter, libraries):
         counter=counter,
         show_hidden_frames=True,
         show_extra_data=False,
-        include_reusable=False)
+        include_reusable=False,
+        context_size=context_size)
     long_er, extra_data_none = long_formatter.format_collected_data(exc_data)
     long_text_er = formatter.format_text(exc_data, show_hidden_frames=True,
                                          show_extra_data=False)[0]
@@ -765,7 +799,8 @@ input_form = HTMLTemplate('''
  ''', name='input_form')
 
 
-def make_eval_exception(app, global_conf, xmlhttp_key=None, reporters=None):
+def make_eval_exception(app, global_conf, xmlhttp_key=None, reporters=None,
+                        context_size=2, **kw):
     """
     Wraps the application in an interactive debugger.
 
@@ -790,7 +825,9 @@ def make_eval_exception(app, global_conf, xmlhttp_key=None, reporters=None):
             if isinstance(reporter, (type, types.ClassType)):
                 reporter = reporter()
             reporters.append(reporter)
-    return EvalException(app, xmlhttp_key=xmlhttp_key, reporters=reporters)
+    context_size = asint(context_size)
+    return EvalException(app, xmlhttp_key=xmlhttp_key, reporters=reporters,
+                         context_size=context_size, **kw)
 
 def make_general_exception(app, global_conf, interactive=False, **kw):
     """
@@ -798,7 +835,6 @@ def make_general_exception(app, global_conf, interactive=False, **kw):
     it will be the interactive exception catcher, otherwise it will be
     the static exception catcher.
     """
-    from paste.deploy.converters import asbool
     interactive = asbool(interactive)
     if interactive:
         return make_eval_exception(app, global_conf, **kw)

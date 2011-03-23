@@ -53,12 +53,14 @@ class AbstractFormatter(object):
     general_data_order = ['object', 'source_url']
 
     def __init__(self, show_hidden_frames=False, include_reusable=True,
-                 show_extra_data=True, trim_source_paths=(), **kwargs):
+                 show_extra_data=True, trim_source_paths=(), context_size=2,
+                 **kwargs):
         self.show_hidden_frames = show_hidden_frames
         self.trim_source_paths = trim_source_paths
         self.include_reusable = include_reusable
         self.show_extra_data = show_extra_data
         self.extra_kwargs = kwargs
+        self.context_size = context_size
 
     def format_collected_data(self, exc_data):
         general_data = {}
@@ -108,7 +110,7 @@ class AbstractFormatter(object):
                         break
             lines.append(self.format_source_line(filename or '?', frame))
             source = frame.get_source_line()
-            long_source = frame.get_source_line(2)
+            long_source = frame.get_source_line(self.context_size)
             if source:
                 lines.append(self.format_long_source(filename, source,
                                                      long_source))
@@ -474,7 +476,7 @@ class XMLFormatter(AbstractFormatter):
             self.format_source_line(filename or '?', frame, newdoc, xml_frame)
             
             source = frame.get_source_line()
-            long_source = frame.get_source_line(2)
+            long_source = frame.get_source_line(self.context_size)
             if source:
                 self.format_long_source(filename,
                     source.decode(frame.source_encoding, 'replace'),
