@@ -17,8 +17,7 @@ if sys.version_info[:2] < (2, 6):
 setup(name='WebError',
       version=version,
       description="Web Error handling and exception catching",
-      long_description="""\
-""",
+      long_description=open('README', 'r').read(),
       classifiers=[
           "Development Status :: 5 - Production/Stable",
           "Intended Audience :: Developers",

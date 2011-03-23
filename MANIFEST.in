@@ -1,2 +1,3 @@
+include README
 recursive-include weberror/eval-media *
 recursive-include weberror eval_template.html

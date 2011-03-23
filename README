@@ -1,0 +1,74 @@
+WebError provides WSGI middlewares for debugging web applications:
+
+* The first one allows interactive debugging through the browser.
+
+  It catches all unexpected exceptions.  A normal traceback  is given, plus
+  controls to see local variables and evaluate expressions in a local context.
+
+* The second one catches unexpected exceptions and records somewhere.
+
+  It can either send the exception to specified email addresses, or save them in
+  a dedicated log file.
+
+
+Paste entry points
+==================
+
+The package contains entry points so that it can be plugged into the Paste HTTP
+server.
+
+
+Default middleware
+------------------
+
+To use it, you can just add this to your list of available Paste filters::
+
+    [filter:debug]
+    use = egg:WebError
+    ; interactive = false
+
+If ``interactive`` is false, if will use the ``error_catcher`` middleware, as
+described below. Otherwise, it will display  the interactive debugger in the web
+browser.
+
+
+``error_catcher`` middleware
+----------------------------
+
+You can also use the ``error_catcher`` middleware, which take further
+configuration::
+
+    [filter:debug]
+    use = egg:WebError:error_catcher
+    ;debug = false
+    ;error_email =
+    ;error_log =
+    ;show_exceptions_in_wsgi_errors =
+    ;smtp_server =
+    ;smtp_username =
+    ;smtp_password =
+    ;smtp_use_tls =
+    ;from_address =
+    ;error_subject_prefix =
+    ;error_message =
+
+
+``debug``:
+  If true, then tracebacks will be shown in the browser.
+
+``error_email``:
+  an email address (or list of addresses) to send exception
+  reports to
+
+``error_log``:
+  a filename to append tracebacks to
+
+``show_exceptions_in_wsgi_errors``:
+  If true, then errors will be printed to ``wsgi.errors``
+  (frequently a server error log, or stderr).
+
+``from_address``, ``smtp_server``, ``error_subject_prefix``, ``smtp_username``, ``smtp_password``, ``smtp_use_tls``:
+  variables to control the emailed exception reports
+
+``error_message``:
+  When debug mode is off, the error message to show to users.
